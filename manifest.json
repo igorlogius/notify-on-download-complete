@@ -1,0 +1,18 @@
+{
+  "author": "igorlogius",
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "description": "notify-on-download-complete",
+  "icons": {
+  },
+  "manifest_version": 2,
+  "name": "notify-on-download-complete",
+  "permissions": [
+    "downloads",
+    "notifications"
+  ],
+  "version": "0.1.0"
+}
