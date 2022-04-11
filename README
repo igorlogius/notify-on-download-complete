@@ -1,4 +1,4 @@
 #!/bin/bash
-export AMO='https://addons.mozilla.org/en-US/firefox/addon/notify-on-download-complete' 
+export AMO='https://addons.mozilla.org/firefox/addon/notify-on-download-complete' 
 export IGN=''
 curl 'https://raw.githubusercontent.com/igorlogius/meta-addon-builder/main/README' | sh
