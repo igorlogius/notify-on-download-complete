@@ -1,6 +1,47 @@
 let dl_store = {} // id => {url:"",file:"" }
 
 //var buttons = [ { "title": "Open" } ]; // <= not availabe in ff yet
+//
+
+
+async function getFromStorage(storeid,fallback) {
+	return (await (async () => {
+		try {
+			//console.log('storeid', storeid)
+			let tmp = await browser.storage.local.get(storeid);
+			//console.log(tmp);
+			if (typeof tmp[storeid] !== 'undefined'){
+				return tmp[storeid];
+
+			}
+		}catch(e){
+			console.error(e);
+		}
+		return fallback;
+	})());
+}
+
+
+
+let customAudioURLs = {
+    complete: null,
+    interrupted: null
+};
+
+function getAudioURLs(key){
+    if(customAudioURLs[key] !== null){
+        return customAudioURLs[key];
+    }
+    return browser.runtime.getURL(key + '.ogg')
+}
+
+function play(url){
+    const player = new Audio(url);
+    player.autoplay = false;
+    player.preload = true;
+    player.loop = false;
+    player.play();
+}
 
 function onCreated(info) {
 	console.log(`Download ${info.id} created.`);
@@ -10,8 +51,8 @@ function onCreated(info) {
 function onChanged(delta) {
 	if(!delta.state) {return;}
 	switch(delta.state.current){
-		case 'complete':
 		case 'interrupted':
+		case 'complete':
 			const info = dl_store[delta.id];
 			const file = info.file;
 			const filename = file.split('/').pop();
@@ -23,11 +64,12 @@ function onChanged(delta) {
 			browser.notifications.create(""+delta.id, // <= "download id" is "notification id"
 			{
 				"type": "basic",
-				"iconUrl": "icons.png",
+				"iconUrl": browser.runtime.getURL("icon.png"),
 				"title": title,
 				"message": msg,
 				//"buttons": buttons, // <= not availabe in firefox yet
 			});
+            play(getAudioURLs(delta.state.current));
 			/**/
 			delete dl_store[delta.id];
 			break;
@@ -43,7 +85,35 @@ function onButtonClicked(id,index) {
 }
 */
 
+function logStorageChange(changes, area) {
+  console.log("Change in storage area: " + area);
+
+  let changedItems = Object.keys(changes);
+
+  for (let item of changedItems) {
+    console.log(item + " has changed:");
+    console.log("Old value: ");
+    console.log(changes[item].oldValue);
+    console.log("New value: ");
+    console.log(changes[item].newValue);
+
+    customAudioURLs[item] = changes[item].newValue; //await browser.storage.local.get(item);
+
+    console.log(item, customAudioURLs[item]);
+  }
+}
+
+browser.storage.onChanged.addListener(logStorageChange);
 browser.downloads.onCreated.addListener(onCreated);
 browser.downloads.onChanged.addListener(onChanged);
 //browser.notifications.onButtonClicked.addListener(onButtonClicked);
+
+
+
+async function handleStartup() {
+    customAudioURLs.complete = await getFromStorage('complete',undefined);
+    customAudioURLs.interrupted = await getFromStorage('interrupted',undefined);
+}
+
+browser.runtime.onStartup.addListener(handleStartup);
 

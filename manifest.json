@@ -5,14 +5,19 @@
       "background.js"
     ]
   },
-  "description": "notify-on-download-complete",
-  "icons": {
+  "icons":{
+      "128": "icon.png"
   },
+  "description": "notify-on-download-complete",
   "manifest_version": 2,
   "name": "notify-on-download-complete",
+   "options_ui": {
+    "page": "options.html"
+  },
   "permissions": [
     "downloads",
-    "notifications"
+    "notifications",
+    "storage"
   ],
-  "version": "0.1.0"
+  "version": "1.1.0"
 }
