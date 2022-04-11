@@ -29,10 +29,7 @@ let customAudioURLs = {
 };
 
 function getAudioURLs(key){
-    if(customAudioURLs[key] !== null){
-        return customAudioURLs[key];
-    }
-    return browser.runtime.getURL(key + '.ogg')
+    return customAudioURLs[key];
 }
 
 function play(url){
@@ -69,7 +66,10 @@ function onChanged(delta) {
 				"message": msg,
 				//"buttons": buttons, // <= not availabe in firefox yet
 			});
-            play(getAudioURLs(delta.state.current));
+            const audioURL = getAudioURLs(delta.state.current)
+            if(audioURL) {
+                play(audioURL);
+            }
 			/**/
 			delete dl_store[delta.id];
 			break;
