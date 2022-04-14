@@ -3,7 +3,6 @@ let dl_store = {} // id => {url:"",file:"" }
 //var buttons = [ { "title": "Open" } ]; // <= not availabe in ff yet
 //
 
-
 async function getFromStorage(storeid,fallback) {
 	return (await (async () => {
 		try {
@@ -45,7 +44,7 @@ function onCreated(info) {
 	dl_store[info.id] = { "url": info.url, "file": info.filename };
 }
 
-function onChanged(delta) {
+async function onChanged(delta) {
 	if(!delta.state) {return;}
 	switch(delta.state.current){
 		case 'interrupted':
@@ -58,7 +57,7 @@ function onChanged(delta) {
 			const msg = ""; //`Savepath: ${file}`; //Download URL: ${url}`;
 			/**/
 			const dlitem = dl_store[delta.id]
-			browser.notifications.create(""+delta.id, // <= "download id" is "notification id"
+			const nID = await browser.notifications.create(""+delta.id, // <= "download id" is "notification id"
 			{
 				"type": "basic",
 				"iconUrl": browser.runtime.getURL("icon.png"),
@@ -70,6 +69,9 @@ function onChanged(delta) {
             if(audioURL) {
                 play(audioURL);
             }
+            setTimeout(() => {
+                browser.notifications.clear(nID);
+            },7*1000);
 			/**/
 			delete dl_store[delta.id];
 			break;
