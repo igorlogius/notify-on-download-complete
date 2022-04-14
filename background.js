@@ -59,19 +59,26 @@ async function onChanged(delta) {
 			const dlitem = dl_store[delta.id]
 			const nID = await browser.notifications.create(""+delta.id, // <= "download id" is "notification id"
 			{
-				"type": "basic",
-				"iconUrl": browser.runtime.getURL("icon.png"),
-				"title": title,
-				"message": msg,
-				//"buttons": buttons, // <= not availabe in firefox yet
+				 "type": "basic"
+				,"iconUrl": browser.runtime.getURL("icon.png")
+				,"title": title
+				,"message": msg
+				//,"buttons": buttons, // <= not availabe in firefox yet
 			});
             const audioURL = getAudioURLs(delta.state.current)
             if(audioURL) {
                 play(audioURL);
             }
-            setTimeout(() => {
-                browser.notifications.clear(nID);
-            },7*1000);
+            const hide = await getFromStorage('hide',0);
+
+            console.log('hide: ' , hide);
+
+            if(hide > 0){
+                setTimeout(() => {
+                    console.log('hide2: ' , hide);
+                    browser.notifications.clear(nID);
+                },hide*1000);
+            }
 			/**/
 			delete dl_store[delta.id];
 			break;
