@@ -1,9 +1,9 @@
-
+/* global browser */
 
 function onChange(evt) {
 
-	id = evt.target.id;
-	el = document.getElementById(id);
+	let id = evt.target.id;
+	let el = document.getElementById(id);
 
 	let value = ( (el.type === 'checkbox') ? el.checked : el.value)
 	let obj = {}
@@ -15,7 +15,7 @@ function onChange(evt) {
 	if(el.type === 'number'){
 		try {
 			value = parseInt(value);
-			if(value === NaN){
+			if(isNaN(value)){
 				value = el.min;
 			}
 			if(value < el.min) {
@@ -33,12 +33,12 @@ function onChange(evt) {
 
 }
 
-[ "hide" ].map( (id) => {
+[ "hide", "enable_start", "enable_complete", "enable_interrupted" ].map( (id) => {
 
 	browser.storage.local.get(id).then( (obj) => {
 
-		el = document.getElementById(id);
-		val = obj[id];
+		let el = document.getElementById(id);
+		let val = obj[id];
 
 		if(typeof val !== 'undefined') {
 			if(el.type === 'checkbox') {
@@ -51,9 +51,9 @@ function onChange(evt) {
             el.value = 0;
         }
 
-	}).catch( (err) => {} );
+	}).catch( console.error );
 
-	el = document.getElementById(id);
+	let el = document.getElementById(id);
 	el.addEventListener('click', onChange);
 	el.addEventListener('keyup', onChange);
 	el.addEventListener('keypress',
@@ -82,19 +82,23 @@ async function getFromStorage(storeid,fallback) {
 }
 
 
-['complete', 'interrupted'].forEach( async (key) => {
+['complete', 'interrupted', 'start'].forEach( async (key) => {
 
     let audio_element = document.getElementById('audio_'+key);//
     let clear_element = document.getElementById('clear_'+key);//
     let input_element = document.getElementById(key)
 
-    clear_element.addEventListener('click', function(evt){
+    clear_element.addEventListener('click', function(){
 
         input_element.value = '';
 
         //console.log(input_element.id);
 
                 switch(input_element.id){
+                    case 'start':
+                        browser.storage.local.set({ 'start': undefined });
+                        audio_element.src = '';
+                        break;
                     case 'complete':
                         browser.storage.local.set({ 'complete': undefined });
                         audio_element.src = '';
@@ -109,14 +113,14 @@ async function getFromStorage(storeid,fallback) {
     });
 
 
-    input_element.addEventListener('input', function (evt) {
+    input_element.addEventListener('input', function () {
 
 
         var file  = this.files[0];
         //console.log(file.name);
 
         var reader = new FileReader();
-        reader.onload = async function(e) {
+        reader.onload = async function() {
             try {
                 //console.log(key, reader.result);
                 //var config = JSON.parse(reader.result);
@@ -125,6 +129,9 @@ async function getFromStorage(storeid,fallback) {
                 audio_element.src = reader.result;
 
                 switch(key){
+                    case 'start':
+                        await browser.storage.local.set({ 'start': reader.result });
+                        break;
                     case 'complete':
                         await browser.storage.local.set({ 'complete': reader.result });
                         break;

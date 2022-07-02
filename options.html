@@ -11,7 +11,16 @@
     </fieldset>
     <h3>Add custom Sounds for Download Events</h3>
     <fieldset>
-        <b>1. Download Complete Sound</b></br>
+        <b>1. Download Start Sound</b></br>
+        <input id="enable_start" type="checkbox" /> Enable <br/>
+        <audio controls id="audio_start"></audio>
+        <button id="clear_start">(!) Remove Sound (!)</button></br>
+        Change Sound:</br>
+        <input id="start" type="file" value="" /></br>
+    </fieldset>
+    <fieldset>
+        <b>2. Download Complete Sound</b></br>
+        <input id="enable_complete" type="checkbox" checked> Enable <br/>
         <audio controls id="audio_complete"></audio>
         <button id="clear_complete">(!) Remove Sound (!)</button></br>
         Change Sound:</br>
@@ -19,6 +28,7 @@
     </fieldset>
     <fieldset>
         <b>2. Download Interrupted Sound</b></br>
+        <input id="enable_interrupted" type="checkbox" checked> Enable <br/>
         <audio controls id="audio_interrupted"></audio>
         <button id="clear_interrupted">(!) Remove Sound (!)</button></br>
         Change Sound:</br>
