@@ -1,16 +1,11 @@
 /* global browser */
 
-let dl_store = {} // id => {url:"",file:"" }
-
-//var buttons = [ { "title": "Open" } ]; // <= not availabe in ff yet
-//
+let dl_store = new Map(); // id => {url:"",file:"" }
 
 async function getFromStorage(storeid,fallback) {
 	return (await (async () => {
 		try {
-			//console.log('storeid', storeid)
 			let tmp = await browser.storage.local.get(storeid);
-			//console.log(tmp);
 			if (typeof tmp[storeid] !== 'undefined'){
 				return tmp[storeid];
 
@@ -22,7 +17,7 @@ async function getFromStorage(storeid,fallback) {
 	})());
 }
 
-let customAudioURLs = {
+let storageDataCache = {
     complete: null,
     interrupted: null,
     hide: 0,
@@ -32,139 +27,101 @@ let customAudioURLs = {
 };
 
 function getAudioURLs(key){
-    return customAudioURLs[key];
+    return storageDataCache[key];
 }
 
 function play(url){
-    return new Promise( (resolve, reject) => {
+    return new Promise( (resolve/*, reject*/) => {
     const player = new Audio(url);
-    player.autoplay = false;
-    player.preload = true;
-    player.loop = false;
-    player.ended = () => { resolve() };
-    player.error = () => { resolve() };
-    player.play();
+        player.autoplay = false;
+        player.preload = true;
+        player.loop = false;
+        player.ended = () => { resolve() };
+        player.error = () => { resolve() };
+        player.play();
     });
 }
 
-async function onCreated(info) {
-	console.log(`Download ${info.id} created.`);
-	dl_store[info.id] = { "url": info.url, "file": info.filename };
-
-    if(customAudioURLs.enable_start) {
-        const file = info.filename;
-        const filename = file.split('/').pop().replace(/.{20}/g,'$&\n')
-            //const url = info.url;
-            const title = `"${filename}" download started`;
-        const msg = ""; //`Savepath: ${file}`; //Download URL: ${url}`;
-        /**/
-        //const dlitem = info;
-        const nID = await browser.notifications.create(""+info.id, // <= "download id" is "notification id"
-                {
-                "type": "basic"
-                ,"iconUrl": browser.runtime.getURL("icon.png")
-                ,"title": title
-                ,"message": msg
-                //,"buttons": buttons, // <= not availabe in firefox yet
-                });
-        const audioURL = getAudioURLs('start')
+async function onDownloadCreated(info) {
+    if(info.url && info.filename) {
+        dl_store.set(info.id, { "url": info.url, "file": info.filename });
+        if(storageDataCache.enable_start) {
+            const file = info.filename;
+            const filename = file.split('/').pop().replace(/.{20}/g,'$&\r\n')
+                const nID = await browser.notifications.create(""+info.id, // <= "download id" is "notification id"
+                        {
+                        "type": "basic"
+                        ,"iconUrl": browser.runtime.getURL("icon.png")
+                        ,"title": "Download Started"
+                        ,"message": filename
+                        });
+            if(storageDataCache.hide > 0){
+                setTimeout(() => {
+                    browser.notifications.clear(nID);
+                },storageDataCache.hide*1000);
+            }
+            const audioURL = getAudioURLs('start');
             if(audioURL) {
                 await play(audioURL);
             }
-
-
-        if(customAudioURLs.hide > 0){
-            setTimeout(() => {
-                    browser.notifications.clear(nID);
-                    },customAudioURLs.hide*1000);
         }
-        /**/
     }
 }
 
-async function onChanged(delta) {
+async function onDownloadChanged(delta) {
 	if(!delta.state) {return;}
-
-	switch(delta.state.current){
-		case 'interrupted':
-            if(!customAudioURLs.enable_interrupted) { return; }
-		case 'complete':
-            if(!customAudioURLs.enable_complete) { return; }
-			const info = dl_store[delta.id];
-			const file = info.file;
-            const filename = file.split('/').pop().replace(/.{20}/g,'$&\n')
-			//const url = info.url;
-			const title = `"${filename}" download ${delta.state.current}`;
-			const msg = ""; //`Savepath: ${file}`; //Download URL: ${url}`;
-			/**/
-			//const dlitem = dl_store[delta.id]
-			const nID = await browser.notifications.create(""+delta.id, // <= "download id" is "notification id"
-			{
-                "type": "basic"
-				,"iconUrl": browser.runtime.getURL("icon.png")
-				,"title": title
-				,"message": msg
-				//,"buttons": buttons, // <= not availabe in firefox yet
-			});
-            const audioURL = getAudioURLs(delta.state.current)
-            if(audioURL) {
-                play(audioURL);
-            }
-
-            if(customAudioURLs.hide > 0){
+    if( (delta.state.current === 'complete' && storageDataCache.enable_complete)
+        || (delta.state.current === 'interrupted' && storageDataCache.enable_interrupted)
+      ){
+        if(dl_store.has(delta.id)) {
+            const info = dl_store.get(delta.id);
+            const file = info.file;
+            const filename = file.split('/').pop().replace(/.{20}/g,'$&\r\n')
+                const nID = await browser.notifications.create(""+delta.id,
+                        {
+                        "type": "basic"
+                        ,"iconUrl": browser.runtime.getURL("icon.png")
+                        ,"title": "Download " + delta.state.current
+                        ,"message": filename
+                        });
+            if(storageDataCache.hide > 0){
                 setTimeout(() => {
                     browser.notifications.clear(nID);
-                },customAudioURLs.hide*1000);
+                },storageDataCache.hide*1000);
             }
-			/**/
-			delete dl_store[delta.id];
-			break;
-		default:
-			break;
-	}
+            const audioURL = getAudioURLs(delta.state.current)
+            if(audioURL) {
+                await play(audioURL);
+            }
+        }
+    }
+    if( (delta.state.current === 'complete' )
+        || (delta.state.current === 'interrupted' )
+    ){
+        if(dl_store.has(delta.id)) {
+            dl_store.delete(delta.id);
+        }
+    }
 }
 
-/*  <= not availabe in ff yet
-function onButtonClicked(id,index) {
-	if( buttons[index].title !== buttons[0].title) { return; }
-	browser.downloads.open(id); // <= download id
-}
-*/
-
-function logStorageChange(changes, area) {
-  console.log("Change in storage area: " + area);
-
-  let changedItems = Object.keys(changes);
-
-  for (let item of changedItems) {
-    console.log(item + " has changed:");
-    console.log("Old value: ");
-    console.log(changes[item].oldValue);
-    console.log("New value: ");
-    console.log(changes[item].newValue);
-
-    customAudioURLs[item] = changes[item].newValue; //await browser.storage.local.get(item);
-
-    console.log(item, customAudioURLs[item]);
-  }
+function onStorageChange(changes /*, area*/) {
+  Object.keys(changes).forEach( (item) => {
+    storageDataCache[item] = changes[item].newValue;
+  });
 }
 
-browser.storage.onChanged.addListener(logStorageChange);
-browser.downloads.onCreated.addListener(onCreated);
-browser.downloads.onChanged.addListener(onChanged);
-//browser.notifications.onButtonClicked.addListener(onButtonClicked);
-
-
-
-async function handleStartup() {
-    customAudioURLs.start = await getFromStorage('start',undefined);
-    customAudioURLs.complete = await getFromStorage('complete',undefined);
-    customAudioURLs.interrupted = await getFromStorage('interrupted',undefined);
-    customAudioURLs.hide = await getFromStorage('hide',0);
-    customAudioURLs.enable_start= await getFromStorage('enable_start',false);
-    customAudioURLs.enable_complete= await getFromStorage('enable_complete',true);
-    customAudioURLs.enable_interrupted= await getFromStorage('enable_interrupted',true);
+async function onRuntimeStartup() {
+    storageDataCache.start = await getFromStorage('start',undefined);
+    storageDataCache.complete = await getFromStorage('complete',undefined);
+    storageDataCache.interrupted = await getFromStorage('interrupted',undefined);
+    storageDataCache.hide = await getFromStorage('hide',0);
+    storageDataCache.enable_start= await getFromStorage('enable_start',false);
+    storageDataCache.enable_complete= await getFromStorage('enable_complete',true);
+    storageDataCache.enable_interrupted= await getFromStorage('enable_interrupted',true);
 }
 
-browser.runtime.onStartup.addListener(handleStartup);
+browser.runtime.onStartup.addListener(onRuntimeStartup);
+browser.storage.onChanged.addListener(onStorageChange);
+browser.downloads.onCreated.addListener(onDownloadCreated);
+browser.downloads.onChanged.addListener(onDownloadChanged);
 
